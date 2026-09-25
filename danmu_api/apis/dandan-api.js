@@ -846,7 +846,24 @@ async function searchAnimeBody(url, preferAnimeId = null, preferSource = null, d
   }
 
   storeAnimeIdsToMap(curAnimes, queryTitle);
-
+// =======新增开始=======
+function getAnimeYear(title) {
+  const res = title.match(/\((\d{4})\)/);
+  return res ? Number(res[1]) : 9999;
+}
+curAnimes.sort((item1, item2) => {
+  const y1 = getAnimeYear(item1.animeTitle);
+  const y2 = getAnimeYear(item2.animeTitle);
+  // 年份升序：2023第一季优先
+  if (y1 !== y2) return y1 - y2;
+  // 同年份不带“第X季”原版靠前
+  const reg = /第\d+季|\d+\(202\d\)/;
+  const s1 = reg.test(item1.animeTitle);
+  const s2 = reg.test(item2.animeTitle);
+  if (s1 !== s2) return s1 ? 1 : -1;
+  return 0;
+});
+// =======新增结束=======
   // 如果启用了集标题过滤，则为每个动漫添加过滤后的 episodes
   if (globals.enableAnimeEpisodeFilter) {
     const validAnimes = [];
@@ -1827,6 +1844,22 @@ async function executeMatchAttempt({ req, title, season, episode, year, preferre
   const searchUrl = buildSearchAnimeUrl(req.url, title, season, episode);
   const searchRes = await searchAnime(searchUrl, preferAnimeId, preferSource, detailStore, targetPlatform);
   const searchData = await searchRes.json();
+  // =======新增开始=======
+function getAnimeYear(title) {
+  const res = title.match(/\((\d{4})\)/);
+  return res ? Number(res[1]) : 9999;
+}
+searchData.animes.sort((item1, item2) => {
+  const y1 = getAnimeYear(item1.animeTitle);
+  const y2 = getAnimeYear(item2.animeTitle);
+  if (y1 !== y2) return y1 - y2;
+  const reg = /第\d+季|\d+\(202\d\)/;
+  const s1 = reg.test(item1.animeTitle);
+  const s2 = reg.test(item2.animeTitle);
+  if (s1 !== s2) return s1 ? 1 : -1;
+  return 0;
+});
+// =======新增结束=======
   log("info", `[system] [match] searchData: ${searchData.animes}`);
   log("info", `[system] [match] Dynamic platformOrder: ${dynamicPlatformOrder}`);
   log("info", `[system] [match] Preferred platform: ${preferredPlatform || 'none'}`);
